@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}二手书交易平台{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>您好, {% if current_user.is_authenticated %}{{ current_user.username }}{% else %}匿名用户{% endif %}!</h1>
+</div>
+<p>
+	{% if current_user.is_administrator() %}
+	<a class="btn btn-danger" href="{{ url_for('.manager_product') }}">二手书管理</a>
+	<a class="btn btn-default" href="{{ url_for('.manager_order') }}">订单管理</a>
+	{% endif %}
+</p>
+{% endblock %}

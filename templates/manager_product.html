@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+
+{% block title %}Flasky - Manager Product{% endblock %}
+
+{% block page_content %}
+<div class="page_header">
+	<h1>二手书信息管理</h1>
+</div>
+{% include '_products.html' %}
+{% if pagination %}
+<div class="pagination">
+	{{ macros.pagination_widget(pagination, '.manager_product') }}
+</div>
+{% endif %}
+{% endblock %}

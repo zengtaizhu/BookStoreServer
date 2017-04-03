@@ -1,0 +1,31 @@
+<ul class="orders">
+	{% for order in orders %}
+	<li class="order">
+		<div class="order-content">
+			<div class="order-seller">卖家姓名：{{ order.seller.username }} </div>
+			<div class="order-products">商品：{{ order.products }}</div>
+			<div class="order-submit-time">提交时间：{{ order.submit_time }}</div>
+			<div class="order-deliver-time">收货时间：{{ order.deliver_time }}</div>
+			<div class="order-state">订单状态：{{ order.state }}</div>
+			<div class="order-phone">电话：{{ order.phone }}</div>
+			<div class="order-address">收货地址：{{ order.address }}</div>
+			<div class="order-totalprice">价格：{{ order.totalprice }}</div>
+			<div class="order-comment">评价：{{ order.comment }}<div>
+			<div class="order-footer">
+				{% if current_user == order.seller %}
+				<a href="{{ url_for('.edit_order', id=order.id) }}">
+					<span class="label label-primary">编辑</span>
+				</a>
+				{% elif current_user.is_administrator() %}
+				<a href="{{ url_for('.edit_order', id=order.id) }}">
+					<span class="label label-danger">编辑[ADMIN]</span>
+				</a>
+				{% endif %}
+				<a href="{{ url_for('.order', id=order.id) }}">
+					<span class="label label-default">链接</span>
+				</a>
+			</div>
+		</div>
+	</li>
+	{% endfor %}
+</ul>

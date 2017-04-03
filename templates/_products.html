@@ -1,0 +1,29 @@
+<ul class="products">
+	{% for product in products %}
+	<li class="product">
+		<div class="product-content">
+			<h3>书名：{{ product.title }}</h3>
+			<div class="product-author">作者：{{ product.author }}</div>
+			<div class="product-press">出版社：{{ product.press }}</div>
+			<div class="product-count">数量：{{ product.count }}</div>
+			<div class="product-price">价格：{{ product.price }}</div>
+			<div class="product-category">类别：{{ product.category.name }}</div>
+			<div class="product-describe">详细描述：{{ product.describe }}</div>
+			<div class="product-footer">
+				{% if current_user == product.seller %}
+				<a href="{{ url_for('.edit_product', id=product.id) }}">
+					<span class="label label-primary">编辑</span>
+				</a>
+				{% elif current_user.is_administrator() %}
+				<a href="{{ url_for('.edit_product', id=product.id) }}">
+					<span class="label label-danger">编辑[ADMIN]</span>
+				</a>
+				{% endif %}
+				<a href="{{ url_for('.product', id=product.id) }}"> 
+					<span class="label label-default">链接</span>
+				</a>
+			</div>
+		</div>
+	</li>
+	{% endfor %}
+</ul>
