@@ -5,6 +5,7 @@ from .. import db
 from ..models import Order, Permission, AnonymousUser, User, Product#表
 from ..models import OrderState, Flasky_Per_Page#常量
 from . import api
+from datetime import datetime
 from .decorators import permission_required
 from .errors import forbidden, unfind, bad_request, unauthorized
 from flask_login import current_user
@@ -48,19 +49,19 @@ def get_order_by_user(id):
                     'count': count
                     })
 
-#通过令牌Token，获取订单
-@api.route('/orders/user/<token>')
+#通过令牌Token，获取所有订单(卖家)
+@api.route('/orders/seller/<token>')
 def get_order_by_token(token):
     u = User.verify_auth_token(str(token))
     if(u is None):
         return forbidden('token is out of time')#提示令牌超时
-    orders = Order.query.filter_by(buyer=u).all()
+    orders = Order.query.filter_by(seller=u).all()
     count = len(orders)
     return jsonify({'count': count,
                     'orders': [order.to_json() for order in orders]
                     })
 
-#通过令牌和订单的状态加载订单
+#通过令牌和订单的状态加载订单（买家）
 @api.route('/orders/user/', methods=['POST'])
 def get_order_by_state():
     d = getDict(request.get_data().decode())
@@ -69,8 +70,24 @@ def get_order_by_state():
 #     print('token=' + token + ',state=' + state)
     u = User.verify_auth_token(token)
     if u is None:
-        return forbidden('token is out of time')#提示令牌超时
+        return forbidden('令牌已过期!')#提示令牌超时
     orders = Order.query.filter_by(buyer=u).filter_by(state=OrderState[state]).all()
+    count = len(orders)
+    return jsonify({'count':count,
+                    'orders':[order.to_json() for order in orders]
+                    })
+    
+#通过令牌和订单的状态加载订单（卖）
+@api.route('/orders/seller/', methods=['POST'])
+def get_own_order_by_state():
+    d = getDict(request.get_data().decode())
+    state = d['state']
+    token = d['token']
+#     print('token=' + token + ',state=' + state)
+    u = User.verify_auth_token(token)
+    if u is None:
+        return forbidden('令牌已过期!')#提示令牌超时
+    orders = Order.query.filter_by(seller=u).filter_by(state=OrderState[state]).all()
     count = len(orders)
     return jsonify({'count':count,
                     'orders':[order.to_json() for order in orders]
@@ -126,7 +143,7 @@ def new_order():
     
 #编辑订单，即修改订单的状态
 @api.route('/orders/modify/', methods=['POST'])
-def edit_order():
+def edit_order_state():
     d = getDict(request.get_data().decode())
     token = d['token']
     id = d['id']
@@ -146,6 +163,34 @@ def edit_order():
     return jsonify({'result':'success',
                         'message':'修改订单状态成功!'})
     
+#编辑订单，即修改订单的状态
+@api.route('/orders/modifyOrder/', methods=['POST'])
+def edit_order():
+    d = getDict(request.get_data().decode())
+    token = d['token']
+    id = d['id']
+    state = d['state']
+    courier = d['courier']
+    print('token=' + token + ',Orderid=' + id + ',state=' + state + ',courier=' + courier)
+    u = User.verify_auth_token(token)
+    if u is None:
+        return unauthorized('令牌已过期!')
+    order = Order.query.get(int(id))
+    if order is None:
+        return unfind('找不到该商品!')
+    if state == 'RECEIVEING':#若订单状态修改为待收货，则更新发货时间
+        order.deliver_time = datetime.utcnow()
+    order.state = OrderState.get(state)
+    order.courier = courier
+    db.session.add(order)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return bad_request('修改订单失败!')
+    return jsonify({'result':'success',
+                        'message':'修改订单成功!'})
+    
 #编辑订单，评价订单
 @api.route('/orders/comment/', methods=['POST'])
 def comment_order():
@@ -161,6 +206,20 @@ def comment_order():
     order.comment = comment
     order.state = OrderState.get('DONE')#将订单的状态改为交易完成
     db.session.add(order)
+    list = re.findall(r'(\d+)\|(\d+),', order.products)
+    for i in list:#添加评论
+        p = Product.query.get(int(i[0]))
+        c = Comment(product=p,
+                    buyer_id=u.id,
+                    buyer_img=u.pictureUrl,
+                    comment_time=datetime.utcnow(),
+                    comment = comment)
+        db.session.add(c)
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return bad_request('评价订单失败!')
     try:
         db.session.commit()
     except IntegrityError:

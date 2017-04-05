@@ -38,9 +38,7 @@ def get_products_by_seller(id):
     products = Product.query.filter_by(seller_id=int(id)).all()
     count = len(products)
     return jsonify({'count': count,
-                    'products': [product.to_json() for product in products],
-                    'prev': None,
-                    'next': None
+                    'products': [product.to_json() for product in products]
                     })
  
 #通过商品ID，获取商品 
@@ -52,20 +50,10 @@ def get_product_by_id(id):
 #通过商品类型ID，分页获取商品
 @api.route('/products/category/<int:id>')
 def get_product_by_category(id):
-    page = request.args.get('page', 1, type=int)
-    pagination = Product.query.filter_by(category_id=id).paginate(
-        page, per_page=Flasky_Per_Page, error_out=False)
-    products = pagination.items
-    prev = None
-    if pagination.has_prev:
-        prev = url_for('api.get_product_by_category', page=page-1, _external=True)
-    next = None
-    if pagination.has_next:
-        next = url_for('api.get_product_by_category', page=page+1, _external=True)
-    return jsonify({'count': pagination.total,
-                    'products': [product.to_json() for product in products],
-                    'prev': prev,
-                    'next': next
+    products = Product.query.filter_by(category_id=id).all()
+    count = len(products)
+    return jsonify({'count': count,
+                    'products': [product.to_json() for product in products]
                     })
 
 #通过关键字，获得商品    

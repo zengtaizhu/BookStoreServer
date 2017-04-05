@@ -113,6 +113,7 @@ class Order(db.Model):
     address = db.Column(db.String(64), nullable=False)
     totalprice = db.Column(db.Float, nullable=False)
     sendWay = db.Column(db.Text(), nullable=False, default='快递 到付')
+    courier = db.Column(db.Text())#快递单号
     comment = db.Column(db.Text())
     
     @staticmethod
@@ -146,7 +147,8 @@ class Order(db.Model):
                       comment=forgery_py.lorem_ipsum.sentences(randint(1, 3)),
                       seller=o,
                       buyer=b,
-                      sendWay='快递 到付')
+                      sendWay='快递 到付',
+                      courier=randint(1, 10000000))
             db.session.add(order)
             try:
                 db.session.commit()
@@ -156,7 +158,7 @@ class Order(db.Model):
     def __repr__(self):
         return '<Order %r>' % self.id
     
-    #将订单转化为JSON数据
+    #将订单转化为JSON数据(买家)
     def to_json(self):
         #先将products解析为Product列表，products格式为：ID|count,ID2|count2,
         import re
@@ -170,6 +172,37 @@ class Order(db.Model):
             productList.append(product)
         json_order = {
                 'id': self.id,
+                'orderId': self.orderId,
+                'products': [product.to_json() for product in productList],
+                'submit_time': self.submit_time,
+                'deliver_time': self.deliver_time,
+                'state': self.state,
+                'phone': self.phone,
+                'address': self.address,
+                'totalprice': self.totalprice,
+                'comment': self.comment,
+                'sendWay': self.sendWay,
+                'courier': self.courier,
+                'user_id': self.seller_id,
+                'user_img': self.seller.pictureUrl
+            }
+        return json_order
+    
+    #将订单转化为JSON数据(卖家)
+    def to_json_own(self):
+        #先将products解析为Product列表，products格式为：ID|count,ID2|count2,
+        import re
+        list = re.findall(r'(\d+)\|(\d+),', self.products)
+        productList = []
+        for item in list:
+            product = Product.query.get(int(item[0]))#找到该商品
+            if product is None:
+                continue
+            product.count = int(item[1])#设置该商品的数量
+            productList.append(product)
+        json_order = {
+                'id': self.id,
+                'orderId': self.orderId,
                 'products': [product.to_json() for product in productList],
                 'submit_time': self.submit_time,
                 'deliver_time': self.deliver_time,
@@ -179,41 +212,11 @@ class Order(db.Model):
                 'totalprice': self.totalprice,
                 'comment': self.comment,
                 'sendWay':self.sendWay,
-                'buyer_id': self.buyer_id,
-                'seller_id': self.seller_id,
-                'seller_img':self.seller.pictureUrl
+                'courier': self.courier,
+                'user_id': self.buyer_id,
+                'user_img':self.buyer.pictureUrl
             }
         return json_order
-    
-    #从JSON格式数据创建订单
-    @staticmethod
-    def from_json(json_order):
-        products = json_order.get('products')
-        submit_time = json_order.get('submit_time')
-        deliver_time = json_order.get('deliver_time')
-        state = json_order.get('state')
-        phone = json_order.get('phone')
-        address = json_order.get('address')
-        totalprice = json_order.get('totalprice')
-        comment = json_order.get('comment')
-        seller_id = json_order.get('seller_id')
-        buyer_id = json_order.get('buyer_id')
-        if seller_id is None or seller_id == '':#----------待修改，添加错误判断
-            raise ValidationError('订单没有卖家')
-        if buyer_id is None or buyer_id == '':
-            raise ValidationError('订单没有卖家')
-        seller = User.query.get(seller_id)
-        buyer = User.query.get(buyer_id)
-        return Order(products=products,
-                     submit_time=submit_time,
-                     deliver_time=deliver_time,
-                     state=state,
-                     phone=phone,
-                     address=address,
-                     totalprice=totalprice,
-                     comment=comment,
-                     seller=seller,
-                     buyer=buyer)
         
 #购物车表        
 class Cart(db.Model):
@@ -594,7 +597,7 @@ class Comment(db.Model):
     buyer_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     buyer_img = db.Column(db.Text())
     comment_time = db.Column(db.DateTime(), default=datetime.utcnow)
-    grade = db.Column(db.Integer, default=5)#等级评价(1-5)
+#     grade = db.Column(db.Integer, default=5)#等级评价(1-5)
     comment = db.Column(db.Text(), nullable=False);
     
     @staticmethod
@@ -613,7 +616,7 @@ class Comment(db.Model):
                         buyer=u,
                         buyer_img = u.pictureUrl,
                         comment_time=datetime.utcnow(),
-                        grade=randint(1, 5),
+#                         grade=randint(1, 5),
                         comment=forgery_py.lorem_ipsum.sentences(randint(1,3)))
             db.session.add(c)
             try:
@@ -631,7 +634,7 @@ class Comment(db.Model):
             'buyer_id':self.buyer_id,
             'buyer_img':self.buyer_img,
             'comment_time':self.comment_time.strftime('%Y-%m-%d %H:%M'),
-            'grade':self.grade,
+#             'grade':self.grade,
             'comment':self.comment
             }
         return json_comment

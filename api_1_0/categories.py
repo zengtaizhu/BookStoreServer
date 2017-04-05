@@ -10,8 +10,11 @@ from ..models import Product, Permission, Category, Grade#表
 #获取商品类         -------------待修改，将没有Product的数据剔除
 @api.route('/categories/')
 def get_categories():
-    categories = Category.query.all()
-    count = len(categories);
+    categories = []
+    for c in Category.query.all():
+        if(Product.query.filter_by(category=c).count() > 0):
+            categories.append(c)
+    count = len(categories)
     return jsonify({'count':count,
                     'categories':[category.to_json() for category in categories]
                     })
